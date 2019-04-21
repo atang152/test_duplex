@@ -16,7 +16,7 @@ type RPCDuplex struct {
 }
 
 // RPCMethod is a receiver which we will use Register to publishes the receiver's methods in the DefaultServer.
-type RPCMethod struct{}
+type API struct{}
 
 // Person is a struct that A will use to expose it's RPC method
 type Person struct {
@@ -25,7 +25,7 @@ type Person struct {
 
 // SayHello is a RPC method
 // RPC methods must look schematically like: func (t *T) MethodName(argType T1, replyType *T2) error
-func (RPCMethod) SayHello(person Person, reply *Person) error {
+func (API) SayHello(person Person, reply *Person) error {
 	*reply = person
 	return nil
 }
@@ -35,11 +35,6 @@ func NewRPCDuplex(conn net.Conn) *RPCDuplex {
 	return &RPCDuplex{conn, rpc.NewClient(conn), rpc.NewServer()}
 }
 
-// Register registers an object in the server, making it visible as a service with the name of the type of the object.
-func (d *RPCDuplex) Register(obj *RPCMethod) {
-	d.Server.Register(obj)
-}
-
 // Serve serves the rpc.Server via net.Conn.
 func (d *RPCDuplex) Serve() {
 	d.Server.ServeConn(d.Conn)
@@ -47,24 +42,42 @@ func (d *RPCDuplex) Serve() {
 
 func main() {
 
-	object := new(RPCMethod)
-
 	connA, connB := net.Pipe()
 	defer connA.Close()
 	defer connB.Close()
 
+	api := new(API)
+
+	c1 := make(chan *RPCDuplex)
+	c2 := make(chan *RPCDuplex)
+
+	fmt.Println("Hello world")
 	go func() {
-		svr := NewRPCDuplex(connA)
-		svr.Register(object)
-		svr.Serve()
+		aDuplex := NewRPCDuplex(connA)
+		aDuplex.Register(api)
+		aDuplex.Serve()
+		c1 <- aDuplex
 	}()
 
-	// Client
+	fmt.Println("STill good")
+
+	go func() {
+		bDuplex := NewRPCDuplex(connB)
+		// bDuplex.Register(api)
+		// bDuplex.Serve()
+		c2 <- bDuplex
+	}()
+
 	var reply Person
+
 	testInput := Person{"Anto"}
 
-	clientA := NewRPCDuplex(connB)
-	err := clientA.Call("RPCMethod.SayHello", testInput, &reply)
+	fmt.Println("STill good!!!!")
+
+	// aDuplex := <-c1
+	test := <-c2
+	// Client
+	err := test.Call("API.SayHello", testInput, &reply)
 
 	if err != nil {
 		log.Fatal("error", err)
