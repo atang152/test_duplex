@@ -15,7 +15,7 @@ type RPCDuplex struct {
 	*rpc.Server
 }
 
-// RPCMethod is a receiver which we will use Register to publishes the receiver's methods in the DefaultServer.
+// API is a receiver which we will use Register to publishes the receiver's methods in the DefaultServer.
 type API struct{}
 
 // Person is a struct that A will use to expose it's RPC method
@@ -49,42 +49,27 @@ func main() {
 	api := new(API)
 
 	c1 := make(chan *RPCDuplex)
-	c2 := make(chan *RPCDuplex)
 
-	fmt.Println("Hello world")
 	go func() {
 		aDuplex := NewRPCDuplex(connA)
 		aDuplex.Register(api)
 		aDuplex.Serve()
-		c1 <- aDuplex
 	}()
-
-	fmt.Println("STill good")
 
 	go func() {
 		bDuplex := NewRPCDuplex(connB)
-		// bDuplex.Register(api)
-		// bDuplex.Serve()
-		c2 <- bDuplex
+		c1 <- bDuplex
 	}()
 
 	var reply Person
+	client1 := <-c1
 
-	testInput := Person{"Anto"}
-
-	fmt.Println("STill good!!!!")
-
-	// aDuplex := <-c1
-	test := <-c2
-	// Client
-	err := test.Call("API.SayHello", testInput, &reply)
-
+	err := client1.Call("API.SayHello", Person{"Anto"}, &reply)
 	if err != nil {
 		log.Fatal("error", err)
 	}
 
 	fmt.Println(reply.Name)
-
 }
 
 // All the other members needed should be made available from the embedded structures.
@@ -107,6 +92,8 @@ func main() {
 // The first structure to be implemented is netutil.RPCDuplex. This structure implements
 // an RPC Duplex connection via a single net.Conn implementation. In other words, both
 // ends of the connection has a rpc.Server and a rpc.Client.
+
+// Resource: https://golangbot.com/inheritance/
 
 // Task 1: Implement RPCDuplex (as specified above).
 // Task 2: Write tests using net.Pipe() and having two RPCDuplex instances communicate with one another.
