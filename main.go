@@ -48,36 +48,20 @@ func main() {
 
 	api := new(API)
 
-	c1 := make(chan *RPCDuplex)
-	c2 := make(chan *RPCDuplex)
+	aDuplex := NewRPCDuplex(connA)
+	bDuplex := NewRPCDuplex(connB)
 
-	fmt.Println("Hello world")
-	go func() {
-		aDuplex := NewRPCDuplex(connA)
-		aDuplex.Register(api)
-		aDuplex.Serve()
-		c1 <- aDuplex
-	}()
+	aDuplex.Register(api)
+	bDuplex.Register(api)
 
-	fmt.Println("STill good")
-
-	go func() {
-		bDuplex := NewRPCDuplex(connB)
-		// bDuplex.Register(api)
-		// bDuplex.Serve()
-		c2 <- bDuplex
-	}()
+	go aDuplex.Serve()
+	go bDuplex.Serve()
 
 	var reply Person
-
 	testInput := Person{"Anto"}
 
-	fmt.Println("STill good!!!!")
-
-	// aDuplex := <-c1
-	test := <-c2
 	// Client
-	err := test.Call("API.SayHello", testInput, &reply)
+	err := bDuplex.Call("API.SayHello", testInput, &reply)
 
 	if err != nil {
 		log.Fatal("error", err)
