@@ -104,7 +104,7 @@ func main() {
 	defer client.Close()
 
 	aDuplex := NewRPCDuplex(client, true)
-	bDuplex := NewRPCDuplex(svr, true)
+	bDuplex := NewRPCDuplex(svr, false)
 
 	b := []byte("Helloworld")
 
